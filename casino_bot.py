@@ -1,6 +1,6 @@
 # Telegram Casino Bot - Рулетка и Блек Джек
 # Автор: Casino Bot Creator
-# Версия: 2.2 - Казино Бабахи (Групповая рулетка)
+# Версия: 2.3 - Казино Бабахи (Групповая рулетка и Блек Джек)
 # Валюта: Хэш-Фугасы
 
 import asyncio
@@ -52,10 +52,13 @@ class GameStates(StatesGroup):
     waiting_players = State()
     multiplayer_game = State()
     group_roulette_waiting = State()
+    group_blackjack_betting = State()
+    group_blackjack_playing = State()
 
 # =============== БАЗА ДАННЫХ (в памяти) ===============
 users_data: Dict[int, dict] = {}
 group_roulette_games: Dict[int, dict] = {}  # Игры в группе по chat_id
+group_blackjack_games: Dict[int, dict] = {}  # Игры Блек Джека в группе по chat_id
 
 def get_user(user_id: int) -> dict:
     """Получить данные пользователя или создать новые"""
@@ -90,6 +93,7 @@ def create_main_menu(user: dict, player_name: str) -> str:
 1️⃣ **Рулетка** - классическая игра везения
 2️⃣ **Блек Джек** - игра против дилера
 3️⃣ **Рулетка в группе** - играй с друзьями
+4️⃣ **Блек Джек в группе** - групповая игра
 
 Выберите игру или посмотрите статистику!
     """
@@ -116,6 +120,9 @@ async def start_command(message: types.Message, state: FSMContext):
         ],
         [
             InlineKeyboardButton(text="🎡 Рулетка в группе", callback_data="group_roulette_menu")
+        ],
+        [
+            InlineKeyboardButton(text="♠️ Блек Джек в группе", callback_data="group_blackjack_menu")
         ],
         [
             InlineKeyboardButton(text="📊 Статистика", callback_data="stats"),
@@ -433,7 +440,7 @@ async def group_roulette_spin(callback: types.CallbackQuery):
     
     await callback.answer("🎉 Игра завершена!")
 
-# =============== БЛЕК ДЖЕК ===============
+# =============== БЛЕК ДЖЕК (личная) ===============
 @dp.callback_query(lambda c: c.data == "game_blackjack")
 async def blackjack_menu(callback: types.CallbackQuery, state: FSMContext):
     """Меню Блек Джека"""
@@ -468,15 +475,6 @@ async def blackjack_menu(callback: types.CallbackQuery, state: FSMContext):
     
     await callback.message.edit_text(text, reply_markup=keyboard, parse_mode="Markdown")
     await callback.answer()
-
-def card_value(card: str) -> int:
-    """Получить значение карты"""
-    if card in ['J', 'Q', 'K']:
-        return 10
-    elif card == 'A':
-        return 11
-    else:
-        return int(card)
 
 def calculate_hand(cards: List[str]) -> tuple:
     """Рассчитать значение руки (возвращает значение и количество aces)"""
@@ -712,6 +710,235 @@ async def blackjack_stand(callback: types.CallbackQuery, state: FSMContext):
     await callback.message.edit_text(result, reply_markup=keyboard, parse_mode="Markdown")
     await callback.answer()
 
+# =============== ГРУППОВОЙ БЛЕ К ДЖЕК ===============
+@dp.callback_query(lambda c: c.data == "group_blackjack_menu")
+async def group_blackjack_menu(callback: types.CallbackQuery, state: FSMContext):
+    """Меню группового Блек Джека"""
+    text = """
+♠️ **ГРУППОВОЙ БЛЕ К ДЖЕК** ♠️
+
+**Как это работает:**
+- Все игроки играют против одного дилера
+- Каждый ставит свою сумму
+- У каждого свои карты и решения
+- Один результат дилера для всех
+
+Выберите ставку:
+    """
+    
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="10 🪙", callback_data="group_bj_bet_10"),
+            InlineKeyboardButton(text="50 🪙", callback_data="group_bj_bet_50"),
+            InlineKeyboardButton(text="100 🪙", callback_data="group_bj_bet_100")
+        ],
+        [
+            InlineKeyboardButton(text="250 🪙", callback_data="group_bj_bet_250"),
+            InlineKeyboardButton(text="500 🪙", callback_data="group_bj_bet_500")
+        ],
+        [
+            InlineKeyboardButton(text="⬅️ Назад", callback_data="back_to_menu")
+        ]
+    ])
+    
+    await callback.message.edit_text(text, reply_markup=keyboard, parse_mode="Markdown")
+    await callback.answer()
+
+@dp.callback_query(lambda c: c.data.startswith("group_bj_bet_"))
+async def group_blackjack_start(callback: types.CallbackQuery, state: FSMContext):
+    """Присоединение к групповой игре Блек Джека"""
+    bet = int(callback.data.split("_")[3])
+    user_id = callback.from_user.id
+    player_name = get_user_name(callback.from_user)
+    user = get_user(user_id)
+    
+    if user['hash_fugasy'] < bet:
+        await callback.answer(f"❌ Недостаточно! У вас {format_currency(user['hash_fugasy'])}, нужно {format_currency(bet)}", show_alert=True)
+        return
+    
+    chat_id = callback.message.chat.id
+    
+    # Создаём игру если её нет
+    if chat_id not in group_blackjack_games:
+        deck = get_deck()
+        group_blackjack_games[chat_id] = {
+            'players': {},
+            'dealer_cards': [deck.pop(), deck.pop()],
+            'deck': deck,
+            'status': 'betting',
+            'message_id': callback.message.message_id
+        }
+    
+    game = group_blackjack_games[chat_id]
+    
+    # Добавляем игрока
+    deck = game['deck']
+    game['players'][user_id] = {
+        'name': player_name,
+        'bet': bet,
+        'cards': [deck.pop(), deck.pop()],
+        'status': 'playing'  # playing, stand, bust
+    }
+    
+    # Обновляем сообщение
+    players_text = "\n".join([f"👤 {p['name']}: {' '.join(p['cards'])} = {calculate_hand(p['cards'])[0]}" 
+                              for p in game['players'].values()])
+    
+    dealer_value, _ = calculate_hand(game['dealer_cards'])
+    
+    text = f"""
+♠️ **ГРУППОВОЙ БЛЕ К ДЖЕК** ♠️
+
+**Карта дилера:** {game['dealer_cards'][0]} ?
+
+**Игроки ({len(game['players'])}):**
+{players_text}
+
+Делайте ходы:
+    """
+    
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="🎴 Ещё карту", callback_data=f"group_bj_hit_{user_id}"),
+            InlineKeyboardButton(text="⏹️ Стоп", callback_data=f"group_bj_stand_{user_id}")
+        ],
+        [
+            InlineKeyboardButton(text="✅ Начать игру дилера", callback_data="group_bj_dealer")
+        ]
+    ])
+    
+    await callback.message.edit_text(text, reply_markup=keyboard, parse_mode="Markdown")
+    await callback.answer("✅ Вы присоединились!")
+
+@dp.callback_query(lambda c: c.data.startswith("group_bj_hit_"))
+async def group_blackjack_hit(callback: types.CallbackQuery):
+    """Взять карту в групповой игре"""
+    user_id = int(callback.data.split("_")[3])
+    chat_id = callback.message.chat.id
+    
+    if chat_id not in group_blackjack_games:
+        await callback.answer("❌ Игра не начиналась", show_alert=True)
+        return
+    
+    game = group_blackjack_games[chat_id]
+    if user_id not in game['players']:
+        await callback.answer("❌ Вы не в этой игре", show_alert=True)
+        return
+    
+    deck = game['deck']
+    if not deck:
+        deck = get_deck()
+        game['deck'] = deck
+    
+    player = game['players'][user_id]
+    player['cards'].append(deck.pop())
+    value, _ = calculate_hand(player['cards'])
+    
+    if value > 21:
+        player['status'] = 'bust'
+        await callback.answer(f"❌ ПЕРЕБОР! {value} очков")
+    else:
+        await callback.answer(f"🎴 Вы взяли карту. Сумма: {value}")
+
+@dp.callback_query(lambda c: c.data.startswith("group_bj_stand_"))
+async def group_blackjack_stand(callback: types.CallbackQuery):
+    """Остановиться в групповой игре"""
+    user_id = int(callback.data.split("_")[3])
+    chat_id = callback.message.chat.id
+    
+    if chat_id not in group_blackjack_games:
+        await callback.answer("❌ Игра не начиналась", show_alert=True)
+        return
+    
+    game = group_blackjack_games[chat_id]
+    if user_id not in game['players']:
+        await callback.answer("❌ Вы не в этой игре", show_alert=True)
+        return
+    
+    player = game['players'][user_id]
+    value, _ = calculate_hand(player['cards'])
+    player['status'] = 'stand'
+    await callback.answer(f"⏹️ Вы остановились с {value} очками")
+
+@dp.callback_query(lambda c: c.data == "group_bj_dealer")
+async def group_blackjack_dealer(callback: types.CallbackQuery):
+    """Игра дилера и результаты"""
+    chat_id = callback.message.chat.id
+    
+    if chat_id not in group_blackjack_games:
+        await callback.answer("❌ Нет активной игры", show_alert=True)
+        return
+    
+    game = group_blackjack_games[chat_id]
+    deck = game['deck']
+    dealer_cards = game['dealer_cards']
+    
+    # Дилер играет
+    while True:
+        dealer_value, _ = calculate_hand(dealer_cards)
+        if dealer_value >= 17:
+            break
+        if not deck:
+            deck = get_deck()
+            game['deck'] = deck
+        dealer_cards.append(deck.pop())
+    
+    dealer_value, _ = calculate_hand(dealer_cards)
+    
+    # Обрабатываем результаты
+    results = []
+    for user_id, player in game['players'].items():
+        user = get_user(user_id)
+        player_value, _ = calculate_hand(player['cards'])
+        
+        # Определяем результат
+        if player['status'] == 'bust':
+            user['hash_fugasy'] -= player['bet']
+            user['total_lost'] += player['bet']
+            results.append(f"❌ {player['name']} - ПЕРЕБОР ({player_value})")
+        elif dealer_value > 21:
+            user['hash_fugasy'] += int(player['bet'] * 1.5)
+            user['total_won'] += int(player['bet'] * 1.5)
+            results.append(f"✅ {player['name']} - ВЫИГРЫШ! Дилер перебрал")
+        elif player_value > dealer_value:
+            user['hash_fugasy'] += int(player['bet'] * 1.5)
+            user['total_won'] += int(player['bet'] * 1.5)
+            results.append(f"✅ {player['name']} - ВЫИГРЫШ! ({player_value} vs {dealer_value})")
+        elif player_value == dealer_value:
+            user['hash_fugasy'] += player['bet']
+            results.append(f"🤝 {player['name']} - НИЧЬЯ ({player_value})")
+        else:
+            user['hash_fugasy'] -= player['bet']
+            user['total_lost'] += player['bet']
+            results.append(f"❌ {player['name']} - ПРОИГРЫШ ({player_value} vs {dealer_value})")
+        
+        user['games_played'] += 1
+        save_user(user_id, user)
+    
+    results_text = "\n".join(results)
+    
+    text = f"""
+🎰 **РЕЗУЛЬТАТЫ БЛЕ К ДЖЕКА** 🎰
+
+**Карты дилера:** {' '.join(dealer_cards)} = **{dealer_value}**
+
+**Результаты:**
+{results_text}
+    """
+    
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="♠️ Новая игра", callback_data="group_blackjack_menu")],
+        [InlineKeyboardButton(text="⬅️ Назад", callback_data="back_to_menu")]
+    ])
+    
+    await callback.message.edit_text(text, reply_markup=keyboard, parse_mode="Markdown")
+    
+    # Удаляем игру
+    if chat_id in group_blackjack_games:
+        del group_blackjack_games[chat_id]
+    
+    await callback.answer("🎉 Игра завершена!")
+
 # =============== СТАТИСТИКА ===============
 @dp.callback_query(lambda c: c.data == "stats")
 async def show_stats(callback: types.CallbackQuery):
@@ -783,6 +1010,9 @@ async def back_to_menu(callback: types.CallbackQuery, state: FSMContext):
             InlineKeyboardButton(text="🎡 Рулетка в группе", callback_data="group_roulette_menu")
         ],
         [
+            InlineKeyboardButton(text="♠️ Блек Джек в группе", callback_data="group_blackjack_menu")
+        ],
+        [
             InlineKeyboardButton(text="📊 Статистика", callback_data="stats"),
             InlineKeyboardButton(text="💰 Баланс", callback_data="balance")
         ]
@@ -794,7 +1024,7 @@ async def back_to_menu(callback: types.CallbackQuery, state: FSMContext):
 # =============== ЗАПУСК БОТА ===============
 async def main():
     """Запуск бота"""
-    print("🎰 Казино БАБАХИ запущено! (Версия 2.2 - Групповая рулетка)")
+    print("🎰 Казино БАБАХИ запущено! (Версия 2.3 - Групповая рулетка и Блек Джек)")
     await dp.start_polling(bot, allowed_updates=dp.resolve_used_update_types())
 
 if __name__ == "__main__":

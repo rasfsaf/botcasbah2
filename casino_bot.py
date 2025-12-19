@@ -19,7 +19,7 @@ from aiogram.fsm.storage.memory import MemoryStorage
 
 # Инициализация
 TOKEN = os.getenv('TELEGRAM_TOKEN')  # Будет установлен из переменной окружения
-bot = Bot(token=TOKEN)
+bot = Bot(token=8534556244:AAHY2I4IQn0ltUqcATx_SIM4ut_9n_nyTNg)
 storage = MemoryStorage()
 dp = Dispatcher(storage=storage)
 

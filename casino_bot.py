@@ -1,6 +1,7 @@
 # Telegram Casino Bot - Рулетка и Блек Джек
 # Автор: Casino Bot Creator
 # Версия: 1.0
+# Валюта: Хэш-Фугасы
 
 import asyncio
 import json
@@ -40,7 +41,7 @@ def get_user(user_id: int) -> dict:
     """Получить данные пользователя или создать новые"""
     if user_id not in users_data:
         users_data[user_id] = {
-            'fantiki': 1000,  # Стартовые фантики
+            'hash_fugasy': 1000,  # Стартовые Хэш-Фугасы
             'total_won': 0,
             'total_lost': 0,
             'games_played': 0,
@@ -64,11 +65,11 @@ async def start_command(message: types.Message, state: FSMContext):
     await state.set_state(GameStates.main_menu)
     
     welcome_text = f"""
-🎰 **ДОБРО ПОЖАЛОВАТЬ В КАЗИНО ФАНТИКОВ!** 🎰
+🎰 **ДОБРО ПОЖАЛОВАТЬ В КАЗИНО ХЭША!** 🎰
 
 Привет, {message.from_user.first_name}! 👋
 
-Ваш баланс: **{user['fantiki']}** 🪙 фантиков
+Ваш баланс: **{user['hash_fugasy']}** 🪙 Хэш-Фугас
 
 **Доступные игры:**
 1️⃣ **Рулетка** - классическая игра везения
@@ -104,12 +105,12 @@ async def roulette_menu(callback: types.CallbackQuery, state: FSMContext):
 🎡 **РУЛЕТКА** 🎡
 
 **Правила:**
-- Выберите ставку (от 10 до 500 фантиков)
+- Выберите ставку (от 10 до 500 Хэш-Фугас)
 - Угадайте: Красное или Чёрное
 - Вероятность выигрыша: 48.6%
 - При выигрыше удвоите ставку
 
-Сколько фантиков ставите?
+Сколько Хэш-Фугас ставите?
     """
     
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
@@ -137,8 +138,8 @@ async def roulette_choose_color(callback: types.CallbackQuery, state: FSMContext
     user_id = callback.from_user.id
     user = get_user(user_id)
     
-    if user['fantiki'] < bet:
-        await callback.answer(f"❌ Недостаточно фантиков! У вас {user['fantiki']}, нужно {bet}", show_alert=True)
+    if user['hash_fugasy'] < bet:
+        await callback.answer(f"❌ Недостаточно Хэш-Фугас! У вас {user['hash_fugasy']}, нужно {bet}", show_alert=True)
         return
     
     await state.update_data(roulette_bet=bet)
@@ -146,7 +147,7 @@ async def roulette_choose_color(callback: types.CallbackQuery, state: FSMContext
     text = f"""
 🎡 **ВЫБЕРИТЕ ЦВЕТ** 🎡
 
-Ставка: **{bet}** 🪙 фантиков
+Ставка: **{bet}** 🪙 Хэш-Фугас
 
 Выберите:
 🔴 **Красное** - удвоите ставку
@@ -182,7 +183,7 @@ async def roulette_spin(callback: types.CallbackQuery, state: FSMContext):
     
     # Обновляем баланс
     if is_win:
-        user['fantiki'] += bet
+        user['hash_fugasy'] += bet
         user['total_won'] += bet
         result_text = f"""
 🎉 **ВЫИГРЫШ!** 🎉
@@ -191,10 +192,10 @@ async def roulette_spin(callback: types.CallbackQuery, state: FSMContext):
 Ваш выбор: **{chosen_color}** ✅
 Выигрыш: **+{bet}** 🪙
 
-Новый баланс: **{user['fantiki']}** 🪙
+Новый баланс: **{user['hash_fugasy']}** 🪙 Хэш-Фугас
         """
     else:
-        user['fantiki'] -= bet
+        user['hash_fugasy'] -= bet
         user['total_lost'] += bet
         result_text = f"""
 😢 **ПРОИГРЫШ** 😢
@@ -203,7 +204,7 @@ async def roulette_spin(callback: types.CallbackQuery, state: FSMContext):
 Ваш выбор: **{chosen_color}** ❌
 Потеря: **-{bet}** 🪙
 
-Новый баланс: **{user['fantiki']}** 🪙
+Новый баланс: **{user['hash_fugasy']}** 🪙 Хэш-Фугас
         """
     
     user['games_played'] += 1
@@ -235,7 +236,7 @@ async def blackjack_menu(callback: types.CallbackQuery, state: FSMContext):
 - При выигрыше - получаете 1.5x от ставки
 - Блекджек (21 с 2 карт) - выигрыш в 2.5x
 
-Сколько фантиков ставите?
+Сколько Хэш-Фугас ставите?
     """
     
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
@@ -300,8 +301,8 @@ async def blackjack_start(callback: types.CallbackQuery, state: FSMContext):
     user_id = callback.from_user.id
     user = get_user(user_id)
     
-    if user['fantiki'] < bet:
-        await callback.answer(f"❌ Недостаточно фантиков! У вас {user['fantiki']}, нужно {bet}", show_alert=True)
+    if user['hash_fugasy'] < bet:
+        await callback.answer(f"❌ Недостаточно Хэш-Фугас! У вас {user['hash_fugasy']}, нужно {bet}", show_alert=True)
         return
     
     # Инициализируем игру
@@ -327,7 +328,7 @@ async def blackjack_start(callback: types.CallbackQuery, state: FSMContext):
 
 **Карта дилера:** {dealer_cards[0]} ?
 
-**Ставка:** {bet} 🪙
+**Ставка:** {bet} 🪙 Хэш-Фугас
     """
     
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
@@ -359,7 +360,7 @@ async def blackjack_hit(callback: types.CallbackQuery, state: FSMContext):
         # Проигрыш
         user_id = callback.from_user.id
         user = get_user(user_id)
-        user['fantiki'] -= bet
+        user['hash_fugasy'] -= bet
         user['total_lost'] += bet
         user['games_played'] += 1
         save_user(user_id, user)
@@ -373,7 +374,7 @@ async def blackjack_hit(callback: types.CallbackQuery, state: FSMContext):
 **Карты дилера:** {' '.join(dealer_cards)}
 
 Проигрыш: **-{bet}** 🪙
-Новый баланс: **{user['fantiki']}** 🪙
+Новый баланс: **{user['hash_fugasy']}** 🪙 Хэш-Фугас
         """
         
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
@@ -398,7 +399,7 @@ async def blackjack_hit(callback: types.CallbackQuery, state: FSMContext):
 
 **Карта дилера:** {dealer_cards[0]} ?
 
-**Ставка:** {bet} 🪙
+**Ставка:** {bet} 🪙 Хэш-Фугас
     """
     
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
@@ -439,7 +440,7 @@ async def blackjack_stand(callback: types.CallbackQuery, state: FSMContext):
     if dealer_value > 21:
         # Выигрыш (дилер перебрал)
         winnings = int(bet * 1.5)
-        user['fantiki'] += winnings
+        user['hash_fugasy'] += winnings
         user['total_won'] += winnings
         result = f"""
 🎉 **ВЫИГРЫШ!** 🎉
@@ -449,12 +450,12 @@ async def blackjack_stand(callback: types.CallbackQuery, state: FSMContext):
 
 Дилер перебрал!
 Выигрыш: **+{winnings}** 🪙
-Новый баланс: **{user['fantiki']}** 🪙
+Новый баланс: **{user['hash_fugasy']}** 🪙 Хэш-Фугас
         """
     elif player_value > dealer_value:
         # Выигрыш
         winnings = int(bet * 1.5)
-        user['fantiki'] += winnings
+        user['hash_fugasy'] += winnings
         user['total_won'] += winnings
         result = f"""
 🎉 **ВЫИГРЫШ!** 🎉
@@ -463,7 +464,7 @@ async def blackjack_stand(callback: types.CallbackQuery, state: FSMContext):
 **Карты дилера:** {' '.join(dealer_cards)} = **{dealer_value}**
 
 Выигрыш: **+{winnings}** 🪙
-Новый баланс: **{user['fantiki']}** 🪙
+Новый баланс: **{user['hash_fugasy']}** 🪙 Хэш-Фугас
         """
     elif player_value == dealer_value:
         # Ничья
@@ -474,12 +475,12 @@ async def blackjack_stand(callback: types.CallbackQuery, state: FSMContext):
 **Карты дилера:** {' '.join(dealer_cards)} = **{dealer_value}**
 
 Ставка возвращена: **+{bet}** 🪙
-Баланс: **{user['fantiki']}** 🪙
+Баланс: **{user['hash_fugasy']}** 🪙 Хэш-Фугас
         """
-        user['fantiki'] += bet
+        user['hash_fugasy'] += bet
     else:
         # Проигрыш
-        user['fantiki'] -= bet
+        user['hash_fugasy'] -= bet
         user['total_lost'] += bet
         result = f"""
 😢 **ПРОИГРЫШ** 😢
@@ -488,7 +489,7 @@ async def blackjack_stand(callback: types.CallbackQuery, state: FSMContext):
 **Карты дилера:** {' '.join(dealer_cards)} = **{dealer_value}** ✅
 
 Проигрыш: **-{bet}** 🪙
-Новый баланс: **{user['fantiki']}** 🪙
+Новый баланс: **{user['hash_fugasy']}** 🪙 Хэш-Фугас
         """
     
     user['games_played'] += 1
@@ -518,7 +519,7 @@ async def show_stats(callback: types.CallbackQuery):
     text = f"""
 📊 **ВАША СТАТИСТИКА** 📊
 
-**Баланс:** {user['fantiki']} 🪙
+**Баланс:** {user['hash_fugasy']} 🪙 Хэш-Фугас
 
 **Всего игр:** {user['games_played']}
 **Выигрыш:** +{user['total_won']} 🪙
@@ -542,7 +543,7 @@ async def show_balance(callback: types.CallbackQuery):
     text = f"""
 💰 **ВАШ БАЛАНС** 💰
 
-**{user['fantiki']}** 🪙 фантиков
+**{user['hash_fugasy']}** 🪙 Хэш-Фугас
 
 Начинайте игру и выигрывайте! 🎰
     """
@@ -585,7 +586,7 @@ async def multiplayer_soon(callback: types.CallbackQuery):
 # =============== ЗАПУСК БОТА ===============
 async def main():
     """Запуск бота"""
-    print("🎰 Казино бот запущен!")
+    print("🎰 Казино бот с Хэш-Фугасами запущен!")
     await dp.start_polling(bot, allowed_updates=dp.resolve_used_update_types())
 
 if __name__ == "__main__":

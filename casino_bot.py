@@ -1,6 +1,6 @@
 # Telegram Casino Bot - Рулетка и Блек Джек
 # Автор: Casino Bot Creator
-# Версия: 2.3 - Казино Бабахи (Групповая рулетка и Блек Джек)
+# Версия: 2.4 - Казино Бабахи (С сохранением данных)
 # Валюта: Хэш-Фугасы
 
 import asyncio
@@ -20,6 +20,9 @@ from aiogram.fsm.storage.memory import MemoryStorage
 # =============== КОНФИГУРАЦИЯ ===============
 # Вставьте ваш токен прямо сюда (в КАВЫЧКАХ!):
 TOKEN = "8534556244:AAHY2I4IQn0ltUqcATx_SIM4ut_9n_nyTNg"
+
+# Файл для сохранения данных
+USERS_DATA_FILE = "users_data.json"
 
 # Инициализация
 bot = Bot(token=TOKEN)
@@ -60,21 +63,49 @@ users_data: Dict[int, dict] = {}
 group_roulette_games: Dict[int, dict] = {}  # Игры в группе по chat_id
 group_blackjack_games: Dict[int, dict] = {}  # Игры Блек Джека в группе по chat_id
 
+# =============== ФУНКЦИИ СОХРАНЕНИЯ/ЗАГРУЗКИ ===============
+def load_users_data():
+    """Загрузить данные пользователей из файла"""
+    global users_data
+    if os.path.exists(USERS_DATA_FILE):
+        try:
+            with open(USERS_DATA_FILE, 'r', encoding='utf-8') as f:
+                users_data = json.load(f)
+                print(f"✅ Загружено {len(users_data)} пользователей из файла")
+        except Exception as e:
+            print(f"❌ Ошибка при загрузке данных: {e}")
+            users_data = {}
+    else:
+        print("📝 Файл данных не найден, создаём новый")
+        users_data = {}
+
+def save_users_data():
+    """Сохранить данные пользователей в файл"""
+    try:
+        with open(USERS_DATA_FILE, 'w', encoding='utf-8') as f:
+            json.dump(users_data, f, indent=2, ensure_ascii=False)
+    except Exception as e:
+        print(f"❌ Ошибка при сохранении данных: {e}")
+
 def get_user(user_id: int) -> dict:
     """Получить данные пользователя или создать новые"""
-    if user_id not in users_data:
-        users_data[user_id] = {
+    user_id_str = str(user_id)
+    if user_id_str not in users_data:
+        users_data[user_id_str] = {
             'hash_fugasy': 1000,  # Стартовые Хэш-Фугасы
             'total_won': 0,
             'total_lost': 0,
             'games_played': 0,
             'username': 'Unknown'
         }
-    return users_data[user_id]
+        save_users_data()
+    return users_data[user_id_str]
 
 def save_user(user_id: int, data: dict):
     """Сохранить данные пользователя"""
-    users_data[user_id] = data
+    user_id_str = str(user_id)
+    users_data[user_id_str] = data
+    save_users_data()
 
 def get_user_name(user: types.User) -> str:
     """Получить имя пользователя (правильное)"""
@@ -1024,7 +1055,8 @@ async def back_to_menu(callback: types.CallbackQuery, state: FSMContext):
 # =============== ЗАПУСК БОТА ===============
 async def main():
     """Запуск бота"""
-    print("🎰 Казино БАБАХИ запущено! (Версия 2.3 - Групповая рулетка и Блек Джек)")
+    print("🎰 Казино БАБАХИ запущено! (Версия 2.4 - С сохранением данных)")
+    load_users_data()
     await dp.start_polling(bot, allowed_updates=dp.resolve_used_update_types())
 
 if __name__ == "__main__":

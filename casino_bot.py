@@ -115,9 +115,9 @@ def create_main_menu(user: dict, player_name: str) -> str:
 
 **Доступные игры:**
 1️⃣ **Рулетка** - классическая игра везения
-2️⃣ **Блек Джек** - игра против дилера
+2️⃣ **Black Jack** - игра против дилера
 3️⃣ **Рулетка в группе** - играй с друзьями
-4️⃣ **Блек Джек в группе** - групповая игра
+4️⃣ **Black Jack в группе** - групповая игра
 
 Выберите игру или посмотрите статистику!
     """
@@ -140,13 +140,13 @@ async def start_command(message: types.Message, state: FSMContext):
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [
             InlineKeyboardButton(text="🎡 Рулетка", callback_data="game_roulette"),
-            InlineKeyboardButton(text="♠️ Блек Джек", callback_data="game_blackjack")
+            InlineKeyboardButton(text="♠️ Black Jack", callback_data="game_blackjack")
         ],
         [
             InlineKeyboardButton(text="🎡 Рулетка в группе", callback_data="group_roulette_menu")
         ],
         [
-            InlineKeyboardButton(text="♠️ Блек Джек в группе", callback_data="group_blackjack_menu")
+            InlineKeyboardButton(text="♠️ Black Jack в группе", callback_data="group_blackjack_menu")
         ],
         [
             InlineKeyboardButton(text="📊 Статистика", callback_data="stats"),
@@ -454,7 +454,7 @@ async def group_roulette_spin(callback: types.CallbackQuery):
     
     await callback.answer("🎉 Игра завершена!")
 
-# =============== БЛЕК ДЖЕК (личная) ===============
+# =============== BLACK JACK (личная) ===============
 def calculate_hand(cards: List[str]) -> tuple:
     """Рассчитать значение руки"""
     total = 0
@@ -492,11 +492,11 @@ def get_deck() -> List[str]:
 
 @dp.callback_query(lambda c: c.data == "game_blackjack")
 async def blackjack_menu(callback: types.CallbackQuery, state: FSMContext):
-    """Меню Блек Джека"""
+    """Меню Black Jack"""
     await state.set_state(GameStates.blackjack_betting)
     
     text = """
-♠️ **БЛЕ К ДЖЕК** ♠️
+♠️ **BLACK JACK** ♠️
 
 **Правила:**
 - Цель: набрать 21 очко или близко к нему
@@ -528,7 +528,7 @@ async def blackjack_menu(callback: types.CallbackQuery, state: FSMContext):
 
 @dp.callback_query(lambda c: c.data.startswith("bj_bet_"))
 async def blackjack_start(callback: types.CallbackQuery, state: FSMContext):
-    """Начало игры Блек Джека"""
+    """Начало игры Black Jack"""
     bet = int(callback.data.split("_")[2])
     user_id = callback.from_user.id
     user = get_user(user_id)
@@ -600,7 +600,7 @@ async def blackjack_start(callback: types.CallbackQuery, state: FSMContext):
     await state.set_state(GameStates.blackjack_playing)
     
     text = f"""
-♠️ **БЛЕ К ДЖЕК - ИГРА** ♠️
+♠️ **BLACK JACK - ИГРА** ♠️
 
 **Ваши карты:** {' '.join(player_cards)}
 Сумма: **{player_value}**
@@ -671,7 +671,7 @@ async def blackjack_hit(callback: types.CallbackQuery, state: FSMContext):
     await state.update_data(bj_deck=deck, bj_player_cards=player_cards)
     
     text = f"""
-♠️ **БЛЕ К ДЖЕК - ИГРА** ♠️
+♠️ **BLACK JACK - ИГРА** ♠️
 
 **Ваши карты:** {' '.join(player_cards)}
 Сумма: **{player_value}**
@@ -800,12 +800,12 @@ async def blackjack_stand(callback: types.CallbackQuery, state: FSMContext):
     await callback.message.edit_text(result, reply_markup=keyboard, parse_mode="Markdown")
     await callback.answer()
 
-# =============== ГРУППОВОЙ БЛЕ К ДЖЕК ===============
+# =============== ГРУППОВОЙ BLACK JACK ===============
 @dp.callback_query(lambda c: c.data == "group_blackjack_menu")
 async def group_blackjack_menu(callback: types.CallbackQuery, state: FSMContext):
-    """Меню группового Блек Джека"""
+    """Меню группового Black Jack"""
     text = """
-♠️ **ГРУППОВОЙ БЛЕ К ДЖЕК** ♠️
+♠️ **ГРУППОВОЙ BLACK JACK** ♠️
 
 **Как это работает:**
 - Все игроки играют против одного дилера
@@ -838,7 +838,7 @@ async def group_blackjack_menu(callback: types.CallbackQuery, state: FSMContext)
 
 @dp.callback_query(lambda c: c.data.startswith("group_bj_bet_"))
 async def group_blackjack_start(callback: types.CallbackQuery, state: FSMContext):
-    """Присоединение к групповой игре Блек Джека"""
+    """Присоединение к групповой игре Black Jack"""
     bet = int(callback.data.split("_")[3])
     user_id = callback.from_user.id
     player_name = get_user_name(callback.from_user)
@@ -875,7 +875,7 @@ async def group_blackjack_start(callback: types.CallbackQuery, state: FSMContext
                               for p in game['players'].values()])
     
     text = f"""
-♠️ **ГРУППОВОЙ БЛЕ К ДЖЕК** ♠️
+♠️ **ГРУППОВОЙ BLACK JACK** ♠️
 
 **Карта дилера:** {game['dealer_cards'][0]} ?
 
@@ -1034,7 +1034,7 @@ async def group_blackjack_dealer(callback: types.CallbackQuery):
     results_text = "\n".join(results)
     
     text = f"""
-🎰 **РЕЗУЛЬТАТЫ БЛЕ К ДЖЕКА** 🎰
+🎰 **РЕЗУЛЬТАТЫ BLACK JACK** 🎰
 
 **Карты дилера:** {' '.join(dealer_cards)} = **{dealer_value}**
 
@@ -1119,13 +1119,13 @@ async def back_to_menu(callback: types.CallbackQuery, state: FSMContext):
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
         [
             InlineKeyboardButton(text="🎡 Рулетка", callback_data="game_roulette"),
-            InlineKeyboardButton(text="♠️ Блек Джек", callback_data="game_blackjack")
+            InlineKeyboardButton(text="♠️ Black Jack", callback_data="game_blackjack")
         ],
         [
             InlineKeyboardButton(text="🎡 Рулетка в группе", callback_data="group_roulette_menu")
         ],
         [
-            InlineKeyboardButton(text="♠️ Блек Джек в группе", callback_data="group_blackjack_menu")
+            InlineKeyboardButton(text="♠️ Black Jack в группе", callback_data="group_blackjack_menu")
         ],
         [
             InlineKeyboardButton(text="📊 Статистика", callback_data="stats"),

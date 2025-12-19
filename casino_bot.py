@@ -626,7 +626,7 @@ async def blackjack_stand(callback: types.CallbackQuery, state: FSMContext):
     await callback.message.edit_text(result, reply_markup=keyboard, parse_mode="Markdown")
     await callback.answer()
 
-# =============== ГРУППОВЫЕ ИГРЫ (ОСТАТОК КОДА ОСТАВЛЯЕМ КАК БЫЛ) ===============
+# =============== ГРУППОВАЯ РУЛЕТКА ===============
 @dp.callback_query(lambda c: c.data == "group_roulette_menu")
 async def group_roulette_menu(callback: types.CallbackQuery, state: FSMContext):
     """Меню групповой рулетки"""
@@ -663,10 +663,6 @@ async def group_roulette_menu(callback: types.CallbackQuery, state: FSMContext):
 @dp.callback_query(lambda c: c.data.startswith("group_bet_"))
 async def group_roulette_start(callback: types.CallbackQuery, state: FSMContext):
     """Начало групповой рулетки"""
-    if not callback.message.chat.type in ['group', 'supergroup', 'private']:
-        await callback.answer("❌ Эта команда работает только в группах или ЛС", show_alert=True)
-        return
-    
     bet = int(callback.data.split("_")[2])
     user_id = callback.from_user.id
     player_name = get_user_name(callback.from_user)
@@ -1135,7 +1131,7 @@ async def back_to_menu(callback: types.CallbackQuery, state: FSMContext):
 # =============== ЗАПУСК БОТА ===============
 async def main():
     """Запуск бота"""
-    print("🎰 Казино БАБАХИ запущено! (Версия 3.1 - ИСПРАВЛЕННЫЙ BLACK JACK 21)")
+    print("🎰 Казино БАБАХИ запущено! (Версия 3.1 - ИСПРАВЛЕННЫЙ BLACK JACK 21 + ГРУППОВЫЕ ИГРЫ)")
     load_users_data()
     await dp.start_polling(bot, allowed_updates=dp.resolve_used_update_types())
 

@@ -18,7 +18,7 @@ from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeybo
 from aiogram.fsm.storage.memory import MemoryStorage
 
 # Инициализация
-TOKEN = 8534556244:AAHY2I4IQn0ltUqcATx_SIM4ut_9n_nyTNg  # Будет установлен из переменной окружения
+TOKEN = 8534556244:AAHY2I4IQn0ltUqcATx_SIM4ut_9n_nyTNg 
 bot = Bot(token=TOKEN)
 storage = MemoryStorage()
 dp = Dispatcher(storage=storage)

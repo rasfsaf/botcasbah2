@@ -13,7 +13,7 @@ from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 # =============== КОНФИГУРАЦИЯ ===============
 
-TOKEN = "PUT_YOUR_TOKEN_HERE"
+TOKEN = "8534556244:AAHY2I4IQn0ltUqcATx_SIM4ut_9n_nyTNg"
 USERS_DATA_FILE = "users_data.json"
 
 bot = Bot(token=TOKEN)

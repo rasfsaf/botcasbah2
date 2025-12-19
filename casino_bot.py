@@ -800,6 +800,61 @@ async def blackjack_stand(callback: types.CallbackQuery, state: FSMContext):
     await callback.message.edit_text(result, reply_markup=keyboard, parse_mode="Markdown")
     await callback.answer()
 
+# =============== ФУНКЦИЯ ОБНОВЛЕНИЯ ОКНА ГРУППОВОГО BLACK JACK ===============
+async def update_group_blackjack_display(chat_id: int, game: dict):
+    """Обновить отображение игры в реальном времени"""
+    if chat_id not in group_blackjack_games:
+        return
+    
+    players_display = []
+    for user_id, player in game['players'].items():
+        value, _ = calculate_hand(player['cards'])
+        cards_str = ' '.join(player['cards'])
+        
+        if player['finished']:
+            if player['status'] == 'bust':
+                status = "💥 ПЕРЕБОР"
+            else:
+                status = "⏹️ СТОИТ"
+        else:
+            status = "🎮 ИГРАЕТ"
+        
+        players_display.append(f"👤 {player['name']}: {cards_str} = **{value}** {status}")
+    
+    players_text = "\n".join(players_display)
+    
+    text = f"""
+♠️ **ГРУППОВОЙ BLACK JACK** ♠️
+
+**Карта дилера:** {game['dealer_cards'][0]} ?
+
+**Игроки ({len(game['players'])}):**
+{players_text}
+
+Делайте ходы:
+    """
+    
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="🎴 Ещё карту", callback_data=f"group_bj_hit_placeholder"),
+            InlineKeyboardButton(text="⏹️ Стоп", callback_data=f"group_bj_stand_placeholder")
+        ],
+        [
+            InlineKeyboardButton(text="✅ Начать игру дилера", callback_data="group_bj_dealer")
+        ]
+    ])
+    
+    try:
+        await bot.edit_message_text(
+            text=text,
+            chat_id=chat_id,
+            message_id=game['message_id'],
+            reply_markup=keyboard,
+            parse_mode="Markdown"
+        )
+    except Exception as e:
+        print(f"❌ Ошибка при обновлении сообщения: {e}")
+
 # =============== ГРУППОВОЙ BLACK JACK ===============
 @dp.callback_query(lambda c: c.data == "group_blackjack_menu")
 async def group_blackjack_menu(callback: types.CallbackQuery, state: FSMContext):
@@ -871,31 +926,8 @@ async def group_blackjack_start(callback: types.CallbackQuery, state: FSMContext
         'finished': False
     }
     
-    players_text = "\n".join([f"👤 {p['name']}: {' '.join(p['cards'])} = {calculate_hand(p['cards'])[0]}" 
-                              for p in game['players'].values()])
-    
-    text = f"""
-♠️ **ГРУППОВОЙ BLACK JACK** ♠️
-
-**Карта дилера:** {game['dealer_cards'][0]} ?
-
-**Игроки ({len(game['players'])}):**
-{players_text}
-
-Делайте ходы:
-    """
-    
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [
-            InlineKeyboardButton(text="🎴 Ещё карту", callback_data=f"group_bj_hit_{user_id}"),
-            InlineKeyboardButton(text="⏹️ Стоп", callback_data=f"group_bj_stand_{user_id}")
-        ],
-        [
-            InlineKeyboardButton(text="✅ Начать игру дилера", callback_data="group_bj_dealer")
-        ]
-    ])
-    
-    await callback.message.edit_text(text, reply_markup=keyboard, parse_mode="Markdown")
+    # Обновляем отображение игры в реальном времени
+    await update_group_blackjack_display(chat_id, game)
     await callback.answer("✅ Вы присоединились!")
 
 @dp.callback_query(lambda c: c.data.startswith("group_bj_hit_"))
@@ -934,6 +966,9 @@ async def group_blackjack_hit(callback: types.CallbackQuery):
         await callback.answer(f"💥 ПЕРЕБОР! {value} очков - ваша игра закончена")
     else:
         await callback.answer(f"🎴 Вы взяли карту. Сумма: {value}")
+    
+    # Обновляем отображение в реальном времени
+    await update_group_blackjack_display(chat_id, game)
 
 @dp.callback_query(lambda c: c.data.startswith("group_bj_stand_"))
 async def group_blackjack_stand(callback: types.CallbackQuery):
@@ -955,6 +990,9 @@ async def group_blackjack_stand(callback: types.CallbackQuery):
     player['status'] = 'stand'
     player['finished'] = True
     await callback.answer(f"⏹️ Вы остановились с {value} очками")
+    
+    # Обновляем отображение в реальном времени
+    await update_group_blackjack_display(chat_id, game)
 
 @dp.callback_query(lambda c: c.data == "group_bj_dealer")
 async def group_blackjack_dealer(callback: types.CallbackQuery):
